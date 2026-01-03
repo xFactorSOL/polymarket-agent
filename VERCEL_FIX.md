@@ -1,59 +1,52 @@
 # Fixing Vercel Python Detection Issue
 
-If Vercel is detecting your project as Python/FastAPI instead of Node.js, follow these steps:
+Vercel is incorrectly detecting this Node.js/TypeScript project as Python/FastAPI.
 
-## Solution 1: Manual Configuration in Vercel Dashboard
+## Solution: Manual Configuration in Vercel Dashboard
 
-1. **Delete the current project** in Vercel (if it exists):
-   - Go to your project settings
-   - Click "Settings" → "Delete Project"
+**You MUST manually configure the project settings. Auto-detect is failing.**
 
-2. **Re-import the project**:
-   - Click "Add New..." → "Project"
-   - Import `xFactorSOL/polymarket-agent`
+### Steps:
 
-3. **In the Configure Project step, manually set**:
-   - **Framework Preset**: Select **"Other"** (NOT auto-detect)
-   - **Root Directory**: `./` (default)
-   - **Build Command**: Leave **EMPTY** (Vercel compiles TypeScript automatically for API routes)
-   - **Output Directory**: Leave **EMPTY**
-   - **Install Command**: `npm install`
+1. **Go to Vercel Dashboard** → Your Project → Settings
 
-4. **Deploy**
+2. **Go to "General" settings**
 
-## Solution 2: Use Vercel CLI
+3. **Scroll to "Build & Development Settings"**
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+4. **Override the following settings**:
+   - **Framework Preset**: Change from "Other" or auto-detect to **"Other"** (explicitly)
+   - **Root Directory**: `./` 
+   - **Build Command**: **DELETE/EMPTY this field** (leave blank)
+   - **Output Directory**: **DELETE/EMPTY this field** (leave blank)  
+   - **Install Command**: `npm install` (should auto-fill)
+   - **Development Command**: Leave empty
 
-# Login
-vercel login
+5. **Save Settings**
 
-# Deploy (it will ask questions, make sure to select Node.js)
-cd polymarket-agent
-vercel
+6. **Redeploy**: Go to Deployments → Click "..." on latest deployment → Redeploy
 
-# When prompted:
-# - Set up and deploy? Yes
-# - Which scope? (select your account)
-# - Link to existing project? No
-# - Project name? polymarket-agent (or your preferred name)
-# - Directory? ./
-# - Override settings? No (or Yes if you want to configure)
-```
+### Alternative: Delete and Re-import
 
-## Solution 3: Check Repository Root
+1. Delete the project in Vercel
+2. Create new project
+3. Import `xFactorSOL/polymarket-agent`
+4. **IMPORTANT**: When configuring, manually set:
+   - Framework: **"Other"**
+   - Build Command: **LEAVE EMPTY**
+   - Output Directory: **LEAVE EMPTY**
+5. Deploy
 
-Make sure there are NO Python files in the repository root that might confuse Vercel:
+### Why This Happens
 
-```bash
-# Check for Python files
-find . -maxdepth 1 -name "*.py" -o -name "pyproject.toml" -o -name "requirements.txt"
-```
+Vercel's auto-detection is incorrectly identifying this as Python. By explicitly setting Framework to "Other" and leaving Build Command empty, Vercel will:
+1. Detect `package.json` exists → knows it's Node.js
+2. See `api/` folder with `.ts` files → knows these are serverless functions
+3. Compile TypeScript automatically (no build command needed for API routes)
 
-If any exist, either delete them or add them to `.gitignore`.
+### Verify It's Working
 
-## Why This Happens
-
-Vercel's auto-detection looks for framework indicators. If it finds anything that looks like Python (or if the detection fails), it might default to Python. By explicitly selecting "Other" and ensuring `package.json` is present, Vercel will recognize it as a Node.js project.
+After deployment, you should see:
+- No Python/FastAPI errors
+- API endpoints available at `/api/*`
+- Build logs show Node.js/npm commands, not Python

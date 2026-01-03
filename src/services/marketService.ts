@@ -154,15 +154,15 @@ export class MarketService {
     let stored = 0;
     let errors = 0;
     let offset = 0;
-    const batchSize = Math.min(limit || 100, 100); // Cap at 100 to avoid timeouts
+    const batchSize = Math.min(limit || 50, 50); // Cap at 50 to avoid timeouts on Vercel
     let hasMore = true;
-    const maxBatches = 10; // Limit to prevent infinite loops/timeouts
+    const maxBatches = 5; // Limit to prevent timeouts (5 batches * 50 = 250 markets max)
 
     try {
       let batchCount = 0;
       while (hasMore && batchCount < maxBatches) {
         batchCount++;
-        logger.debug({ offset, batchSize, batchCount }, 'Fetching batch of markets');
+        logger.info({ offset, batchSize, batchCount, maxBatches }, 'Fetching batch of markets');
 
         const params: any = {
           limit: batchSize,

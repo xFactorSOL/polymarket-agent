@@ -15,11 +15,6 @@ export default async function handler(
     return response.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Set timeout for long-running operations
-  const timeout = setTimeout(() => {
-    logger.warn('Ingestion request timeout');
-  }, 25000); // 25 seconds (Vercel functions have 30s default, but we want to finish before)
-
   try {
     const { markets, events, limit, offset, sinceDays, active, closed } = request.body || {};
     const results: any = {};
@@ -31,8 +26,8 @@ export default async function handler(
       const marketService = new MarketService();
       const sinceDaysNum = sinceDays ? Number(sinceDays) : 30;
       
-      // Limit to reasonable values to avoid timeouts
-      const ingestLimit = limit ? Math.min(Number(limit), 100) : 100;
+      // Limit to reasonable values to avoid timeouts on Vercel (30s limit)
+      const ingestLimit = limit ? Math.min(Number(limit), 50) : 50;
       
       const ingestResult = await marketService.refreshMarkets({
         sinceDays: sinceDaysNum,
@@ -60,7 +55,6 @@ export default async function handler(
       results.events = eventResults;
     }
 
-    clearTimeout(timeout);
     closeDb();
 
     return response.status(200).json({
@@ -68,7 +62,6 @@ export default async function handler(
       results,
     });
   } catch (error: any) {
-    clearTimeout(timeout);
     logger.error({ error: error.message }, 'Error during ingest');
     closeDb();
     return response.status(500).json({

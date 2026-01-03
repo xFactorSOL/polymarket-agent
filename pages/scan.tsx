@@ -68,7 +68,7 @@ export default function ScanPage() {
             type="number"
             className="input"
             value={liquidity}
-            onChange={(e) => setLiquidity(e.target.value)}
+            onChange={(e) => setLiquidity((e.target as HTMLInputElement).value)}
             min="0"
             step="100"
           />
@@ -78,7 +78,7 @@ export default function ScanPage() {
             type="number"
             className="input"
             value={volume}
-            onChange={(e) => setVolume(e.target.value)}
+            onChange={(e) => setVolume((e.target as HTMLInputElement).value)}
             min="0"
             step="100"
           />
@@ -88,7 +88,7 @@ export default function ScanPage() {
             type="number"
             className="input"
             value={minProb}
-            onChange={(e) => setMinProb(e.target.value)}
+            onChange={(e) => setMinProb((e.target as HTMLInputElement).value)}
             min="0"
             max="1"
             step="0.01"
@@ -99,7 +99,7 @@ export default function ScanPage() {
             type="number"
             className="input"
             value={maxProb}
-            onChange={(e) => setMaxProb(e.target.value)}
+            onChange={(e) => setMaxProb((e.target as HTMLInputElement).value)}
             min="0"
             max="1"
             step="0.01"

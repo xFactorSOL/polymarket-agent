@@ -67,7 +67,7 @@ export default function IngestPage() {
             type="number"
             className="input"
             value={sinceDays}
-            onChange={(e) => setSinceDays(e.target.value)}
+            onChange={(e) => setSinceDays((e.target as HTMLInputElement).value)}
             min="1"
             max="365"
           />
@@ -77,7 +77,7 @@ export default function IngestPage() {
             type="number"
             className="input"
             value={limit}
-            onChange={(e) => setLimit(e.target.value)}
+            onChange={(e) => setLimit((e.target as HTMLInputElement).value)}
             min="1"
             max="1000"
           />

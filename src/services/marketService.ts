@@ -154,12 +154,15 @@ export class MarketService {
     let stored = 0;
     let errors = 0;
     let offset = 0;
-    const batchSize = limit || 100;
+    const batchSize = Math.min(limit || 100, 100); // Cap at 100 to avoid timeouts
     let hasMore = true;
+    const maxBatches = 10; // Limit to prevent infinite loops/timeouts
 
     try {
-      while (hasMore) {
-        logger.debug({ offset, batchSize }, 'Fetching batch of markets');
+      let batchCount = 0;
+      while (hasMore && batchCount < maxBatches) {
+        batchCount++;
+        logger.debug({ offset, batchSize, batchCount }, 'Fetching batch of markets');
 
         const params: any = {
           limit: batchSize,
@@ -201,9 +204,13 @@ export class MarketService {
         }
 
         // Respect rate limits - small delay between batches
-        if (hasMore) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        if (hasMore && batchCount < maxBatches) {
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
+      }
+      
+      if (batchCount >= maxBatches) {
+        logger.warn({ maxBatches }, 'Reached maximum batch limit, stopping ingestion');
       }
 
       logger.info(

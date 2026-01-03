@@ -1,5 +1,28 @@
 -- Polymarket Agent Database Schema (PostgreSQL)
 
+-- Markets cache table - stores ingested markets with CLOB token IDs
+CREATE TABLE IF NOT EXISTS markets_cache (
+    "marketId" TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    "endDate" TEXT,
+    "isActive" INTEGER DEFAULT 1,
+    "isClosed" INTEGER DEFAULT 0,
+    "yesTokenId" TEXT,
+    "noTokenId" TEXT,
+    "conditionId" TEXT,
+    "eventId" TEXT,
+    "rawJson" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP DEFAULT NOW(),
+    "createdAt" TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_markets_cache_slug ON markets_cache(slug);
+CREATE INDEX IF NOT EXISTS idx_markets_cache_endDate ON markets_cache("endDate");
+CREATE INDEX IF NOT EXISTS idx_markets_cache_isActive ON markets_cache("isActive");
+CREATE INDEX IF NOT EXISTS idx_markets_cache_updatedAt ON markets_cache("updatedAt");
+
 -- Markets table - stores market metadata from Gamma API
 CREATE TABLE IF NOT EXISTS markets (
     id TEXT PRIMARY KEY,
@@ -93,23 +116,6 @@ CREATE TABLE IF NOT EXISTS scans (
     completed_at TIMESTAMP
 );
 
--- Markets cache table - stores ingested markets with CLOB token IDs
-CREATE TABLE IF NOT EXISTS markets_cache (
-    marketId TEXT PRIMARY KEY,
-    question TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL,
-    endDate TEXT,
-    isActive INTEGER DEFAULT 1,
-    isClosed INTEGER DEFAULT 0,
-    yesTokenId TEXT,
-    noTokenId TEXT,
-    conditionId TEXT,
-    eventId TEXT,
-    rawJson TEXT NOT NULL,
-    updatedAt TIMESTAMP DEFAULT NOW(),
-    createdAt TIMESTAMP DEFAULT NOW()
-);
-
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_markets_active ON markets(active);
 CREATE INDEX IF NOT EXISTS idx_markets_slug ON markets(slug);
@@ -119,7 +125,3 @@ CREATE INDEX IF NOT EXISTS idx_positions_market_id ON positions(market_id);
 CREATE INDEX IF NOT EXISTS idx_positions_status ON positions(status);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_agent_name ON agent_logs(agent_name);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_created_at ON agent_logs(created_at);
-CREATE INDEX IF NOT EXISTS idx_markets_cache_slug ON markets_cache(slug);
-CREATE INDEX IF NOT EXISTS idx_markets_cache_endDate ON markets_cache(endDate);
-CREATE INDEX IF NOT EXISTS idx_markets_cache_isActive ON markets_cache(isActive);
-CREATE INDEX IF NOT EXISTS idx_markets_cache_updatedAt ON markets_cache(updatedAt);

@@ -209,9 +209,75 @@ The database stores:
 
 See `src/db/schema.sql` for full schema.
 
+## Deployment
+
+### GitHub
+
+The repository is available at: https://github.com/xFactorSOL/polymarket-agent
+
+### Vercel Deployment
+
+This project can be deployed to Vercel as serverless API functions. The API routes are located in the `/api` directory.
+
+#### Deploy to Vercel
+
+1. **Install Vercel CLI** (optional, can also use GitHub integration):
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Deploy**:
+   ```bash
+   vercel
+   ```
+   
+   Or connect your GitHub repository to Vercel for automatic deployments:
+   - Go to [vercel.com](https://vercel.com)
+   - Import the `xFactorSOL/polymarket-agent` repository
+   - Configure environment variables (see below)
+   - Deploy
+
+3. **Set Environment Variables** in Vercel dashboard:
+   - `DATABASE_PATH` - Note: Vercel serverless functions use `/tmp` for temporary storage (database resets on each invocation)
+   - `GAMMA_API_BASE_URL` - Default: `https://gamma-api.polymarket.com`
+   - `CLOB_API_BASE_URL` - Default: `https://clob.polymarket.com`
+   - `LOG_LEVEL` - Default: `info`
+   - `LOG_PRETTY` - Default: `false`
+
+#### API Endpoints
+
+Once deployed, the following endpoints are available:
+
+- `GET /api` - API information
+- `GET /api/health` - Health check
+- `POST /api/ingest` - Ingest markets/events
+  ```json
+  {
+    "markets": true,
+    "events": false,
+    "limit": 100,
+    "offset": 0
+  }
+  ```
+- `POST /api/scan` - Scan markets
+  ```json
+  {
+    "liquidity": 1000,
+    "volume": 5000,
+    "maxProb": 0.95,
+    "minProb": 0.05
+  }
+  ```
+- `GET /api/report?audit=true&positions=true&orders=true&stats=true` - Generate reports
+- `GET /api/report?trail=<marketId>` - Get audit trail for a market
+
+**Note**: SQLite database on Vercel is ephemeral (stored in `/tmp`). For persistent storage, consider using Vercel Postgres or another database service.
+
 ## Important Notes
 
 ⚠️ **Trading is NOT implemented** - This is a scaffold/stub system. The `ExecutionAgent` and `ExitAgent` contain stubs that log actions but do not execute actual trades. Implement trading logic carefully with proper testing and risk management.
+
+⚠️ **Database on Vercel** - The SQLite database is stored in `/tmp` which is ephemeral. Each serverless function invocation may not have access to previous data. For production use, consider migrating to Vercel Postgres or another persistent database service.
 
 ## License
 

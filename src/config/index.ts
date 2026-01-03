@@ -38,8 +38,14 @@ export function getConfig(): Config {
 
   try {
     // Merge process.env with defaults for missing values
+    // On Vercel/serverless, use /tmp; otherwise use ./data
+    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+    const defaultDbPath = isVercel 
+      ? '/tmp/polymarket.db' 
+      : './data/polymarket.db';
+    
     const envWithDefaults = {
-      DATABASE_PATH: process.env.DATABASE_PATH || './data/polymarket.db',
+      DATABASE_PATH: process.env.DATABASE_PATH || defaultDbPath,
       GAMMA_API_BASE_URL: process.env.GAMMA_API_BASE_URL || 'https://gamma-api.polymarket.com',
       CLOB_API_BASE_URL: process.env.CLOB_API_BASE_URL || 'https://clob.polymarket.com',
       CLOB_API_KEY: process.env.CLOB_API_KEY,

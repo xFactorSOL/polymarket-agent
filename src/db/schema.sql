@@ -16,6 +16,28 @@ CREATE TABLE IF NOT EXISTS markets (
     updated_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
+-- Markets cache table - stores ingested markets with CLOB token IDs
+CREATE TABLE IF NOT EXISTS markets_cache (
+    marketId TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    endDate TEXT,
+    isActive INTEGER DEFAULT 1,
+    isClosed INTEGER DEFAULT 0,
+    yesTokenId TEXT,
+    noTokenId TEXT,
+    conditionId TEXT,
+    eventId TEXT,
+    rawJson TEXT NOT NULL,
+    updatedAt INTEGER DEFAULT (strftime('%s', 'now')),
+    createdAt INTEGER DEFAULT (strftime('%s', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_markets_cache_slug ON markets_cache(slug);
+CREATE INDEX IF NOT EXISTS idx_markets_cache_endDate ON markets_cache(endDate);
+CREATE INDEX IF NOT EXISTS idx_markets_cache_isActive ON markets_cache(isActive);
+CREATE INDEX IF NOT EXISTS idx_markets_cache_updatedAt ON markets_cache(updatedAt);
+
 -- Events table - stores event metadata from Gamma API
 CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,

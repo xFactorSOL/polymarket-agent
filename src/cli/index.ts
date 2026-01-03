@@ -11,6 +11,7 @@ import { AuditorAgent } from '../agents/auditorAgent.js';
 import { GammaApi } from '../clients/gammaApi.js';
 import { getDb, closeDb } from '../db/db.js';
 import { getConfig } from '../config/index.js';
+import { MarketService } from '../services/marketService.js';
 
 const logger = getLogger('cli');
 const program = new Command();
@@ -24,33 +25,42 @@ program
 program
   .command('ingest')
   .description('Ingest market and event data from Gamma API into database')
+  .option('--gammaSinceDays <number>', 'Fetch markets updated in the last N days', '30')
   .option('-m, --markets', 'Ingest markets')
   .option('-e, --events', 'Ingest events')
-  .option('-l, --limit <number>', 'Limit number of records', '100')
+  .option('-l, --limit <number>', 'Limit number of records per batch', '100')
   .option('-o, --offset <number>', 'Offset for pagination', '0')
+  .option('--active', 'Only fetch active markets')
+  .option('--closed', 'Include closed markets')
   .action(async (options) => {
     logger.info('Starting ingest command');
     
     try {
-      const gammaApi = new GammaApi();
-      const db = getDb();
-
-      if (options.markets || (!options.markets && !options.events)) {
-        logger.info({ limit: options.limit, offset: options.offset }, 'Ingesting markets');
+      if (options.gammaSinceDays || options.markets || (!options.markets && !options.events)) {
+        const sinceDays = parseInt(options.gammaSinceDays || '30');
+        logger.info({ sinceDays }, 'Ingesting markets from Gamma API');
         
-        // TODO: Implement market ingestion
-        const markets = await gammaApi.searchMarkets({
-          limit: parseInt(options.limit),
-          offset: parseInt(options.offset),
+        const marketService = new MarketService();
+        const result = await marketService.refreshMarkets({
+          sinceDays,
+          limit: options.limit ? parseInt(options.limit) : undefined,
+          active: options.active ? true : undefined,
+          closed: options.closed ? true : undefined,
         });
 
-        logger.info({ count: markets.length }, 'Markets fetched');
-        // Insert into database
+        console.log('\n✅ Market ingestion completed:');
+        console.log(`   Fetched: ${result.fetched} markets`);
+        console.log(`   Stored: ${result.stored} markets`);
+        if (result.errors > 0) {
+          console.log(`   Errors: ${result.errors} markets`);
+        }
+        console.log(`   Total cached: ${marketService.getCachedMarketsCount()} markets\n`);
       }
 
       if (options.events) {
         logger.info({ limit: options.limit, offset: options.offset }, 'Ingesting events');
         
+        const gammaApi = new GammaApi();
         // TODO: Implement event ingestion
         const events = await gammaApi.searchEvents({
           limit: parseInt(options.limit),
@@ -62,8 +72,9 @@ program
       }
 
       logger.info('Ingest completed');
-    } catch (error) {
-      logger.error({ error }, 'Error during ingest');
+    } catch (error: any) {
+      logger.error({ error: error.message }, 'Error during ingest');
+      console.error(`\n❌ Error: ${error.message}\n`);
       process.exit(1);
     } finally {
       closeDb();

@@ -20,12 +20,16 @@ export function getDb(): Database.Database {
   const dbPath = config.DATABASE_PATH;
   const dbDir = dirname(dbPath);
   
-  // Only create directory if it's not the root (e.g., /tmp/file.db -> /tmp, ./file.db -> .)
-  if (dbDir && dbDir !== '.' && dbDir !== '/' && dbDir !== '\\') {
+  // Create directory if needed (skip for root paths like /tmp)
+  // On Vercel, /tmp exists but we still want to handle ./data case
+  if (dbDir && dbDir !== '.' && dbDir !== '/' && dbDir !== '\\' && !dbPath.startsWith('/tmp/')) {
     try {
       mkdirSync(dbDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, ignore
+    } catch (error: any) {
+      // Directory might already exist, ignore EEXIST errors
+      if (error.code !== 'EEXIST') {
+        throw error;
+      }
     }
   }
 

@@ -11,6 +11,7 @@ export default async function handler(
       ingest: '/api/ingest',
       scan: '/api/scan',
       report: '/api/report',
+      markets: '/api/markets',
       health: '/api/health',
     },
   });

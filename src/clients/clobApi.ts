@@ -49,12 +49,14 @@ export interface CLOBTrade {
 export class ClobApi {
   private baseUrl: string;
   private apiKey?: string;
-  private privateKey?: string;
+  private secret?: string;
+  private passphrase?: string;
 
   constructor() {
     this.baseUrl = config.CLOB_API_BASE_URL;
     this.apiKey = config.CLOB_API_KEY;
-    this.privateKey = config.CLOB_PRIVATE_KEY;
+    this.secret = config.CLOB_SECRET;
+    this.passphrase = config.CLOB_PASSPHRASE;
   }
 
   /**

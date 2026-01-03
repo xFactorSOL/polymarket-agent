@@ -1,0 +1,47 @@
+{
+  "name": "polymarket-agent",
+  "version": "1.0.0",
+  "description": "Agentic Polymarket trading system using Gamma and CLOB APIs",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "polymarket-agent": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "ingest": "node dist/cli/index.js ingest",
+    "scan": "node dist/cli/index.js scan",
+    "trade": "node dist/cli/index.js trade",
+    "monitor": "node dist/cli/index.js monitor",
+    "report": "node dist/cli/index.js report"
+  },
+  "keywords": [
+    "polymarket",
+    "trading",
+    "agent",
+    "clob",
+    "gamma"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2",
+    "zod": "^3.23.8",
+    "better-sqlite3": "^11.7.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.7.9",
+    "@vercel/node": "^3.0.28",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

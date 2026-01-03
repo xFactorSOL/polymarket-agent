@@ -1,30 +1,33 @@
-# Fixing Vercel Python Detection Issue
+# Vercel Deployment Guide
 
-Vercel is incorrectly detecting this Node.js/TypeScript project as Python/FastAPI.
+## ✅ Current Status
 
-## Solution: Manual Configuration in Vercel Dashboard
+Vercel is now correctly detecting this as a Node.js/TypeScript project! 
 
-**You MUST manually configure the project settings. Auto-detect is failing.**
+The TypeScript configuration has been fixed to exclude the `api/` folder from the main build (since Vercel compiles API routes separately).
 
-### Steps:
+## Recommended Settings
 
-1. **Go to Vercel Dashboard** → Your Project → Settings
+For API routes on Vercel, you have two options:
 
-2. **Go to "General" settings**
+### Option 1: No Build Command (Recommended for API Routes)
 
-3. **Scroll to "Build & Development Settings"**
+1. **Go to Vercel Dashboard** → Your Project → Settings → General
+2. **Build & Development Settings**:
+   - **Framework Preset**: "Other"
+   - **Build Command**: **LEAVE EMPTY** (Vercel compiles TypeScript automatically)
+   - **Output Directory**: **LEAVE EMPTY**
+   - **Install Command**: `npm install`
 
-4. **Override the following settings**:
-   - **Framework Preset**: Change from "Other" or auto-detect to **"Other"** (explicitly)
-   - **Root Directory**: `./` 
-   - **Build Command**: **DELETE/EMPTY this field** (leave blank)
-   - **Output Directory**: **DELETE/EMPTY this field** (leave blank)  
-   - **Install Command**: `npm install` (should auto-fill)
-   - **Development Command**: Leave empty
+3. **Save and Redeploy**
 
-5. **Save Settings**
+### Option 2: Keep Build Command (for CLI)
 
-6. **Redeploy**: Go to Deployments → Click "..." on latest deployment → Redeploy
+If you want to build the CLI (`src/` folder), keep:
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+
+**Note**: The `api/` folder is excluded from the TypeScript build since Vercel compiles it separately for serverless functions.
 
 ### Alternative: Delete and Re-import
 

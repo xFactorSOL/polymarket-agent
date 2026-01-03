@@ -4,8 +4,9 @@
   "description": "Agentic Polymarket trading system using Gamma and CLOB APIs",
   "type": "module",
   "main": "dist/cli/index.js",
-  "bin": {
-    "polymarket-agent": "./dist/cli/index.js"
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
   },
   "scripts": {
     "build": "tsc",
@@ -22,13 +23,12 @@
     "trading",
     "agent",
     "clob",
-    "gamma"
+    "gamma",
+    "nodejs",
+    "typescript"
   ],
   "author": "",
   "license": "MIT",
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "dependencies": {
     "@vercel/node": "^3.0.28",
     "dotenv": "^16.4.5",

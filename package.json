@@ -9,9 +9,12 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch src/cli/index.ts",
-    "start": "node dist/cli/index.js",
+    "build": "next build",
+    "build:cli": "tsc",
+    "dev": "next dev",
+    "dev:cli": "tsx watch src/cli/index.ts",
+    "start": "next start",
+    "start:cli": "node dist/cli/index.js",
     "ingest": "node dist/cli/index.js ingest",
     "scan": "node dist/cli/index.js scan",
     "trade": "node dist/cli/index.js trade",

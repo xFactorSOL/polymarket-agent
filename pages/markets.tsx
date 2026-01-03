@@ -14,14 +14,14 @@ export default function MarketsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/report?positions=false&orders=false&stats=false');
+      const response = await fetch('/api/markets?limit=100');
       const data = await response.json();
       
-      if (data.report?.audit) {
-        // For now, just show the audit info
-        // TODO: Add markets endpoint to API
-        setMarkets([]);
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch markets');
       }
+
+      setMarkets(data.markets || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -65,33 +65,47 @@ export default function MarketsPage() {
         )}
 
         {markets.length > 0 && (
-          <div className="table">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Question</th>
-                  <th>Slug</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {markets.map((market) => (
-                  <tr key={market.id}>
-                    <td>{market.id}</td>
-                    <td>{market.question}</td>
-                    <td>{market.slug}</td>
-                    <td>
-                      {market.isActive ? (
-                        <span className="status success">Active</span>
-                      ) : (
-                        <span className="status">Inactive</span>
-                      )}
-                    </td>
+          <div>
+            <p style={{ marginBottom: '1rem', color: '#aaa' }}>
+              Showing {markets.length} markets
+            </p>
+            <div className="table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Market ID</th>
+                    <th>Question</th>
+                    <th>Slug</th>
+                    <th>Status</th>
+                    <th>End Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {markets.map((market: any) => (
+                    <tr key={market.marketId}>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {market.marketId.slice(0, 8)}...
+                      </td>
+                      <td>{market.question}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                        {market.slug}
+                      </td>
+                      <td>
+                        {market.isActive === 1 ? (
+                          <span className="status success">Active</span>
+                        ) : (
+                          <span className="status">Inactive</span>
+                        )}
+                        {market.isClosed === 1 && (
+                          <span className="status" style={{ marginLeft: '0.5rem' }}>Closed</span>
+                        )}
+                      </td>
+                      <td>{market.endDate || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

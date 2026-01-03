@@ -3,6 +3,9 @@ import { readFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { getConfig } from '../config/index.js';
+import { getLogger } from '../utils/logger.js';
+
+const logger = getLogger('db');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,8 +36,11 @@ export function getDb(): Database.Database {
     try {
       mkdirSync(dbDir, { recursive: true });
     } catch (error: any) {
-      // Directory might already exist, ignore EEXIST errors
-      if (error.code !== 'EEXIST') {
+      // If directory creation fails (e.g., on Vercel), fallback to /tmp
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        logger.warn({ originalPath: dbPath, error: error.message }, 'Directory creation failed, using /tmp fallback');
+        dbPath = '/tmp/polymarket.db';
+      } else if (error.code !== 'EEXIST') {
         throw error;
       }
     }

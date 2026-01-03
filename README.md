@@ -113,10 +113,22 @@ pnpm report --audit --positions --orders --stats
 
 ### Development
 
-Run in development mode with hot reload:
+#### Dashboard (Web UI)
+
+Run the Next.js dashboard in development mode:
 
 ```bash
-pnpm dev ingest
+pnpm dev
+```
+
+Then open http://localhost:3000 in your browser.
+
+#### CLI
+
+Run CLI commands in development mode:
+
+```bash
+pnpm dev:cli ingest
 ```
 
 ## Project Structure

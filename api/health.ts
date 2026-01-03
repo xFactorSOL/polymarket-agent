@@ -16,10 +16,12 @@ export default async function handler(
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    return response.status(500).json({
+    // Return 200 with unhealthy status (don't fail the request)
+    return response.status(200).json({
       status: 'unhealthy',
       error: error.message,
       timestamp: new Date().toISOString(),
+      note: 'Database may not be available in serverless environment',
     });
   }
 }

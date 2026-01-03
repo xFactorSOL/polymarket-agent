@@ -19,10 +19,14 @@ export function getDb(): Database.Database {
   // Ensure database directory exists
   const dbPath = config.DATABASE_PATH;
   const dbDir = dirname(dbPath);
-  try {
-    mkdirSync(dbDir, { recursive: true });
-  } catch (error) {
-    // Directory might already exist, ignore
+  
+  // Only create directory if it's not the root (e.g., /tmp/file.db -> /tmp, ./file.db -> .)
+  if (dbDir && dbDir !== '.' && dbDir !== '/' && dbDir !== '\\') {
+    try {
+      mkdirSync(dbDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist, ignore
+    }
   }
 
   // Initialize database

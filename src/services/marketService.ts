@@ -47,11 +47,26 @@ export class MarketService {
     noTokenId?: string;
     conditionId?: string;
   } {
-    // Gamma API structure may vary, try common patterns
-    const tokens = (market as any).tokens || (market as any).outcomes;
-    const yesTokenId = market.yesTokenId || tokens?.[0]?.tokenId || tokens?.[0]?.id;
-    const noTokenId = market.noTokenId || tokens?.[1]?.tokenId || tokens?.[1]?.id;
-    const conditionId = market.conditionId || (market as any).conditionId || market.id;
+    const marketAny = market as any;
+    
+    // Parse clobTokenIds if it's a JSON string
+    let clobTokenIds: string[] = [];
+    if (marketAny.clobTokenIds) {
+      if (typeof marketAny.clobTokenIds === 'string') {
+        try {
+          clobTokenIds = JSON.parse(marketAny.clobTokenIds);
+        } catch (e) {
+          // If parsing fails, try as array
+          clobTokenIds = Array.isArray(marketAny.clobTokenIds) ? marketAny.clobTokenIds : [];
+        }
+      } else if (Array.isArray(marketAny.clobTokenIds)) {
+        clobTokenIds = marketAny.clobTokenIds;
+      }
+    }
+    
+    const yesTokenId = marketAny.yesTokenId || clobTokenIds[0] || marketAny.tokens?.[0]?.tokenId;
+    const noTokenId = marketAny.noTokenId || clobTokenIds[1] || marketAny.tokens?.[1]?.tokenId;
+    const conditionId = marketAny.conditionId || market.id;
 
     return {
       yesTokenId,
@@ -66,17 +81,19 @@ export class MarketService {
   private storeMarket(market: GammaMarket): void {
     const { yesTokenId, noTokenId, conditionId } = this.extractTokenIds(market);
     
+    const marketAny = market as any;
+    
     const record = {
-      marketId: market.id,
+      marketId: String(market.id),
       question: market.question,
       slug: market.slug,
-      endDate: market.endDateISO || null,
+      endDate: market.endDateISO || marketAny.endDateIso || marketAny.endDate || null,
       isActive: market.active !== false ? 1 : 0,
-      isClosed: (market as any).closed === true ? 1 : 0,
+      isClosed: marketAny.closed === true ? 1 : 0,
       yesTokenId: yesTokenId || null,
       noTokenId: noTokenId || null,
       conditionId: conditionId || null,
-      eventId: market.eventId || null,
+      eventId: market.eventId || marketAny.events?.[0]?.id || null,
       rawJson: JSON.stringify(market),
       updatedAt: Math.floor(Date.now() / 1000),
     };

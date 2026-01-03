@@ -182,10 +182,18 @@ export class GammaApi {
         return res;
       });
 
-      const data = await response.json() as GammaMarketsResponse;
+      const data = await response.json();
       
-      // Handle different response formats
-      const markets = data.results || data.data || data.markets || [];
+      // Gamma API returns an array directly, not an object
+      // Handle both array and object response formats
+      let markets: GammaMarket[];
+      if (Array.isArray(data)) {
+        markets = data as GammaMarket[];
+      } else {
+        // Fallback for object format (if API changes)
+        const responseObj = data as GammaMarketsResponse;
+        markets = responseObj.results || responseObj.data || responseObj.markets || [];
+      }
       
       logger.info({ count: markets.length, params }, 'Fetched markets from Gamma API');
       return markets;

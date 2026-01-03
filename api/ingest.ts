@@ -41,14 +41,14 @@ export default async function handler(
 
     closeDb();
 
-    response.status(200).json({
+    return response.status(200).json({
       success: true,
       results,
     });
   } catch (error: any) {
     logger.error({ error }, 'Error during ingest');
     closeDb();
-    response.status(500).json({
+    return response.status(500).json({
       success: false,
       error: error.message || 'Internal server error',
     });

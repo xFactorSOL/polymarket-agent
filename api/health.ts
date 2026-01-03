@@ -11,12 +11,12 @@ export default async function handler(
     db.prepare('SELECT 1').get();
     closeDb();
 
-    response.status(200).json({
+    return response.status(200).json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    response.status(500).json({
+    return response.status(500).json({
       status: 'unhealthy',
       error: error.message,
       timestamp: new Date().toISOString(),

@@ -44,7 +44,7 @@ export default async function handler(
 
     closeDb();
 
-    response.status(200).json({
+    return response.status(200).json({
       success: true,
       count: markets.length,
       markets,
@@ -52,7 +52,7 @@ export default async function handler(
   } catch (error: any) {
     logger.error({ error }, 'Error during scan');
     closeDb();
-    response.status(500).json({
+    return response.status(500).json({
       success: false,
       error: error.message || 'Internal server error',
     });

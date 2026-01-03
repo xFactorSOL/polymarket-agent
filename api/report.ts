@@ -51,14 +51,14 @@ export default async function handler(
 
     closeDb();
 
-    response.status(200).json({
+    return response.status(200).json({
       success: true,
       report,
     });
   } catch (error: any) {
     logger.error({ error }, 'Error during report');
     closeDb();
-    response.status(500).json({
+    return response.status(500).json({
       success: false,
       error: error.message || 'Internal server error',
     });

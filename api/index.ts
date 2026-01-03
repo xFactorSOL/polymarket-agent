@@ -4,7 +4,7 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  response.status(200).json({
+  return response.status(200).json({
     message: 'Polymarket Agent API',
     version: '1.0.0',
     endpoints: {

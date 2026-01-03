@@ -17,12 +17,19 @@ export function getDb(): Database.Database {
   const config = getConfig();
   
   // Ensure database directory exists
-  const dbPath = config.DATABASE_PATH;
+  let dbPath = config.DATABASE_PATH;
+  
+  // Force /tmp on Vercel if not already set
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+  if (isVercel && !dbPath.startsWith('/tmp')) {
+    dbPath = '/tmp/polymarket.db';
+  }
+  
   const dbDir = dirname(dbPath);
   
   // Create directory if needed (skip for root paths like /tmp)
-  // On Vercel, /tmp exists but we still want to handle ./data case
-  if (dbDir && dbDir !== '.' && dbDir !== '/' && dbDir !== '\\' && !dbPath.startsWith('/tmp/')) {
+  // Never try to create /tmp - it always exists
+  if (dbDir && dbDir !== '.' && dbDir !== '/' && dbDir !== '\\' && !dbPath.startsWith('/tmp')) {
     try {
       mkdirSync(dbDir, { recursive: true });
     } catch (error: any) {

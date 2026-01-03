@@ -221,21 +221,27 @@ This project can be deployed to Vercel as serverless API functions. The API rout
 
 #### Deploy to Vercel
 
-1. **Install Vercel CLI** (optional, can also use GitHub integration):
-   ```bash
-   npm i -g vercel
-   ```
+1. **Go to Vercel Dashboard**:
+   - Visit [vercel.com](https://vercel.com) and sign in
+   - Click "Add New..." → "Project"
 
-2. **Deploy**:
-   ```bash
-   vercel
-   ```
-   
-   Or connect your GitHub repository to Vercel for automatic deployments:
-   - Go to [vercel.com](https://vercel.com)
-   - Import the `xFactorSOL/polymarket-agent` repository
-   - Configure environment variables (see below)
-   - Deploy
+2. **Import GitHub Repository**:
+   - Select "Import Git Repository"
+   - Choose `xFactorSOL/polymarket-agent`
+   - Click "Import"
+
+3. **Configure Project Settings**:
+   - **Framework Preset**: Select "Other" (or leave as "Other")
+   - **Root Directory**: `./` (default)
+   - **Build Command**: Leave empty (Vercel compiles TypeScript automatically)
+   - **Output Directory**: Leave empty
+   - **Install Command**: `npm install` (should auto-detect)
+
+4. **Set Environment Variables** (optional, in "Environment Variables" section):
+   - `DATABASE_PATH=/tmp/polymarket.db`
+   - Add any other env vars from `.env.example` as needed
+
+5. **Deploy**: Click "Deploy"
 
 3. **Set Environment Variables** in Vercel dashboard:
    - `DATABASE_PATH` - Note: Vercel serverless functions use `/tmp` for temporary storage (database resets on each invocation)

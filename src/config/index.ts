@@ -14,7 +14,8 @@ const ConfigSchema = z.object({
   // CLOB API
   CLOB_API_BASE_URL: z.string().url(),
   CLOB_API_KEY: z.string().optional(),
-  CLOB_PRIVATE_KEY: z.string().optional(),
+  CLOB_SECRET: z.string().optional(),
+  CLOB_PASSPHRASE: z.string().optional(),
 
   // Logging
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']),
@@ -42,7 +43,8 @@ export function getConfig(): Config {
       GAMMA_API_BASE_URL: process.env.GAMMA_API_BASE_URL || 'https://gamma-api.polymarket.com',
       CLOB_API_BASE_URL: process.env.CLOB_API_BASE_URL || 'https://clob.polymarket.com',
       CLOB_API_KEY: process.env.CLOB_API_KEY,
-      CLOB_PRIVATE_KEY: process.env.CLOB_PRIVATE_KEY,
+      CLOB_SECRET: process.env.CLOB_SECRET,
+      CLOB_PASSPHRASE: process.env.CLOB_PASSPHRASE,
       LOG_LEVEL: process.env.LOG_LEVEL || 'info',
       LOG_PRETTY: process.env.LOG_PRETTY || 'false',
       WATCHER_INTERVAL_MS: process.env.WATCHER_INTERVAL_MS || '60000',

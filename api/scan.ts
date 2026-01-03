@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { EvFilterAgent } from '../src/agents/evFilterAgent.js';
-import { getDb, closeDb } from '../src/db/db.js';
+import { execute, closeDb } from '../src/db/db.js';
 import { getLogger } from '../src/utils/logger.js';
 
 const logger = getLogger('api-scan');
@@ -22,7 +22,6 @@ export default async function handler(
     } = request.body || {};
 
     const evFilterAgent = new EvFilterAgent();
-    const db = getDb();
 
     const criteria = {
       minLiquidity: Number(liquidity),
@@ -34,15 +33,18 @@ export default async function handler(
     logger.info({ criteria }, 'Scanning markets');
     const markets = await evFilterAgent.filterMarkets(criteria);
 
-    // Store scan results
-    const stmt = db.prepare(`
+    // Store scan results (Postgres)
+    await execute(`
       INSERT INTO scans (scan_type, markets_scanned, markets_filtered, results, completed_at)
-      VALUES (?, ?, ?, ?, strftime('%s', 'now'))
-    `);
+      VALUES ($1, $2, $3, $4, NOW())
+    `, [
+      'ev_filter',
+      0,
+      markets.length,
+      JSON.stringify(markets),
+    ]);
 
-    stmt.run('ev_filter', 0, markets.length, JSON.stringify(markets));
-
-    closeDb();
+    await closeDb();
 
     return response.status(200).json({
       success: true,
@@ -51,7 +53,7 @@ export default async function handler(
     });
   } catch (error: any) {
     logger.error({ error }, 'Error during scan');
-    closeDb();
+    await closeDb();
     return response.status(500).json({
       success: false,
       error: error.message || 'Internal server error',

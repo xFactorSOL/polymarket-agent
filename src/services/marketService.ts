@@ -1,4 +1,4 @@
-import { getDb } from '../db/db.js';
+import { getDb, query, queryOne, execute } from '../db/db.js';
 import { GammaApi, GammaMarket } from '../clients/gammaApi.js';
 import { getLogger } from '../utils/logger.js';
 
@@ -23,8 +23,8 @@ export interface MarketCacheRecord {
   conditionId: string | null;
   eventId: string | null;
   rawJson: string;
-  updatedAt: number;
-  createdAt: number;
+  updatedAt: Date | number;
+  createdAt: Date | number;
 }
 
 /**
@@ -32,11 +32,9 @@ export interface MarketCacheRecord {
  */
 export class MarketService {
   private gammaApi: GammaApi;
-  private db: ReturnType<typeof getDb>;
 
   constructor() {
     this.gammaApi = new GammaApi();
-    this.db = getDb();
   }
 
   /**
@@ -76,9 +74,9 @@ export class MarketService {
   }
 
   /**
-   * Store a market in the cache
+   * Store a market in the cache (Postgres)
    */
-  private storeMarket(market: GammaMarket): void {
+  private async storeMarket(market: GammaMarket): Promise<void> {
     const { yesTokenId, noTokenId, conditionId } = this.extractTokenIds(market);
     
     const marketAny = market as any;
@@ -95,29 +93,28 @@ export class MarketService {
       conditionId: conditionId || null,
       eventId: market.eventId || marketAny.events?.[0]?.id || null,
       rawJson: JSON.stringify(market),
-      updatedAt: Math.floor(Date.now() / 1000),
+      updatedAt: new Date(),
     };
 
-    const stmt = this.db.prepare(`
+    // Use Postgres ON CONFLICT syntax
+    await execute(`
       INSERT INTO markets_cache (
-        marketId, question, slug, endDate, isActive, isClosed,
-        yesTokenId, noTokenId, conditionId, eventId, rawJson, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(marketId) DO UPDATE SET
-        question = excluded.question,
-        slug = excluded.slug,
-        endDate = excluded.endDate,
-        isActive = excluded.isActive,
-        isClosed = excluded.isClosed,
-        yesTokenId = excluded.yesTokenId,
-        noTokenId = excluded.noTokenId,
-        conditionId = excluded.conditionId,
-        eventId = excluded.eventId,
-        rawJson = excluded.rawJson,
-        updatedAt = excluded.updatedAt
-    `);
-
-    stmt.run(
+        "marketId", question, slug, "endDate", "isActive", "isClosed",
+        "yesTokenId", "noTokenId", "conditionId", "eventId", "rawJson", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT("marketId") DO UPDATE SET
+        question = EXCLUDED.question,
+        slug = EXCLUDED.slug,
+        "endDate" = EXCLUDED."endDate",
+        "isActive" = EXCLUDED."isActive",
+        "isClosed" = EXCLUDED."isClosed",
+        "yesTokenId" = EXCLUDED."yesTokenId",
+        "noTokenId" = EXCLUDED."noTokenId",
+        "conditionId" = EXCLUDED."conditionId",
+        "eventId" = EXCLUDED."eventId",
+        "rawJson" = EXCLUDED."rawJson",
+        "updatedAt" = EXCLUDED."updatedAt"
+    `, [
       record.marketId,
       record.question,
       record.slug,
@@ -129,8 +126,8 @@ export class MarketService {
       record.conditionId,
       record.eventId,
       record.rawJson,
-      record.updatedAt
-    );
+      record.updatedAt,
+    ]);
   }
 
   /**
@@ -141,7 +138,7 @@ export class MarketService {
     stored: number;
     errors: number;
   }> {
-    const { sinceDays, limit = 100, active, closed } = options;
+    const { sinceDays, limit = 50, active, closed } = options;
     logger.info({ sinceDays, limit, active, closed }, 'Starting market refresh');
 
     // Calculate date range
@@ -154,7 +151,7 @@ export class MarketService {
     let stored = 0;
     let errors = 0;
     let offset = 0;
-    const batchSize = Math.min(limit || 50, 50); // Cap at 50 to avoid timeouts on Vercel
+    const batchSize = Math.min(limit || 50, 50); // Cap at 50 to avoid timeouts
     let hasMore = true;
     const maxBatches = 5; // Limit to prevent timeouts (5 batches * 50 = 250 markets max)
 
@@ -162,7 +159,7 @@ export class MarketService {
       let batchCount = 0;
       while (hasMore && batchCount < maxBatches) {
         batchCount++;
-        logger.info({ offset, batchSize, batchCount, maxBatches }, 'Fetching batch of markets');
+        logger.info({ offset, batchSize, batchCount }, 'Fetching batch of markets');
 
         const params: any = {
           limit: batchSize,
@@ -188,7 +185,7 @@ export class MarketService {
         // Store each market
         for (const market of markets) {
           try {
-            this.storeMarket(market);
+            await this.storeMarket(market);
             stored++;
           } catch (error: any) {
             logger.error({ error: error.message, marketId: market.id }, 'Error storing market');
@@ -228,18 +225,16 @@ export class MarketService {
   /**
    * Get cached market by ID
    */
-  getCachedMarket(marketId: string): MarketCacheRecord | null {
-    const stmt = this.db.prepare('SELECT * FROM markets_cache WHERE marketId = ?');
-    const record = stmt.get(marketId) as MarketCacheRecord | undefined;
-    return record || null;
+  async getCachedMarket(marketId: string): Promise<MarketCacheRecord | null> {
+    const row = await queryOne('SELECT * FROM markets_cache WHERE "marketId" = $1', [marketId]);
+    return row as MarketCacheRecord | null;
   }
 
   /**
    * Get cached markets count
    */
-  getCachedMarketsCount(): number {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM markets_cache');
-    const result = stmt.get() as { count: number };
-    return result.count;
+  async getCachedMarketsCount(): Promise<number> {
+    const result = await queryOne('SELECT COUNT(*) as count FROM markets_cache') as { count: string | number } | null;
+    return result ? Number(result.count) : 0;
   }
 }

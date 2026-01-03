@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, closeDb } from '../src/db/db.js';
+import { queryOne, closeDb } from '../src/db/db.js';
 
 export default async function handler(
   request: VercelRequest,
@@ -7,33 +7,24 @@ export default async function handler(
 ) {
   try {
     // Test database connection
-    const db = getDb();
-    db.prepare('SELECT 1').get();
-    closeDb();
+    await queryOne('SELECT 1 as test');
+    await closeDb();
 
     return response.status(200).json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
+      database: 'PostgreSQL',
     });
   } catch (error: any) {
     // Return 200 with unhealthy status (don't fail the request)
-    // On Vercel, database errors are expected due to ephemeral /tmp
-    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
-    
-    // Check if it's a directory creation error
-    const isDirError = error.message?.includes('ENOENT') || error.message?.includes('mkdir');
+    const hasPostgres = !!(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING);
     
     let errorMessage = error.message;
-    let note = 'Database may not be available';
+    let note = 'Database connection failed';
     
-    if (isVercel) {
-      if (isDirError) {
-        errorMessage = 'Using /tmp for database (ephemeral storage)';
-        note = 'Database resets on each serverless invocation. This is normal for Vercel.';
-      } else {
-        errorMessage = 'Database uses ephemeral storage on Vercel (expected)';
-        note = 'Database resets on each serverless invocation. This is normal for Vercel deployments.';
-      }
+    if (!hasPostgres) {
+      errorMessage = 'POSTGRES_URL not configured';
+      note = 'Please set up Vercel Postgres in your project settings';
     }
     
     return response.status(200).json({
@@ -41,7 +32,7 @@ export default async function handler(
       error: errorMessage,
       timestamp: new Date().toISOString(),
       note: note,
-      isVercel: isVercel,
+      hasPostgres: hasPostgres,
     });
   }
 }

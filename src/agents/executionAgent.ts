@@ -1,6 +1,6 @@
 import { getLogger } from '../utils/logger.js';
 import { ClobClient } from '../clients/clobClient.js';
-import { getDb, Order } from '../db/db.js';
+import { queryOne } from '../db/db.js';
 
 const logger = getLogger('executionAgent');
 
@@ -19,17 +19,15 @@ export interface ExecutionParams {
  */
 export class ExecutionAgent {
   private clobClient: ClobClient;
-  private db: ReturnType<typeof getDb>;
 
   constructor() {
     this.clobClient = new ClobClient();
-    this.db = getDb();
   }
 
   /**
    * Execute a trade
    */
-  async execute(params: ExecutionParams): Promise<Order> {
+  async execute(params: ExecutionParams): Promise<any> {
     logger.info({ params }, 'Executing trade');
     
     try {
@@ -44,29 +42,28 @@ export class ExecutionAgent {
 
       logger.warn('ExecutionAgent.execute() is a stub - trading not implemented');
       
-      // Stub: create order record
+      // Stub: create order record (Postgres)
       const orderId = `order_${Date.now()}`;
-      const stmt = this.db.prepare(`
+      await queryOne(`
         INSERT INTO orders (id, market_id, outcome, side, price, size, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      
-      stmt.run(
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [
         orderId,
         params.marketId,
         params.outcome,
         params.side,
         params.price,
         params.size,
-        'PENDING'
-      );
+        'PENDING',
+      ]);
 
       logger.info({ orderId }, 'Order created (stub)');
       
       // Return stub order
-      const order = this.db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as Order;
+      const order = await queryOne('SELECT * FROM orders WHERE id = $1', [orderId]);
       return order;
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error, params }, 'Error executing trade');
       throw error;
     }
@@ -85,7 +82,7 @@ export class ExecutionAgent {
       // 3. Update order status to CANCELLED
 
       logger.warn('ExecutionAgent.cancelOrder() is a stub - not implemented');
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error, orderId }, 'Error canceling order');
       throw error;
     }
@@ -105,7 +102,7 @@ export class ExecutionAgent {
       // 4. Handle fills (update positions)
 
       logger.debug('Order status update completed');
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error }, 'Error updating order statuses');
       throw error;
     }
@@ -123,25 +120,33 @@ export class ExecutionAgent {
     logger.debug('Getting execution statistics');
     
     try {
-      const stats = this.db.prepare(`
+      const stats = await queryOne(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN status = 'FILLED' THEN 1 ELSE 0 END) as filled,
-          SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled
+          SUM(CASE WHEN status = 'FILLED' THEN 1 ELSE 0 END)::int as filled,
+          SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END)::int as cancelled
         FROM orders
-      `).get() as { total: number; filled: number; cancelled: number };
+      `) as { total: string | number; filled: string | number; cancelled: string | number } | null;
 
-      const fillRate = stats.total > 0 ? stats.filled / stats.total : 0;
+      if (!stats) {
+        return { totalOrders: 0, filledOrders: 0, cancelledOrders: 0, fillRate: 0 };
+      }
+
+      const total = Number(stats.total);
+      const filled = Number(stats.filled);
+      const cancelled = Number(stats.cancelled);
+      const fillRate = total > 0 ? filled / total : 0;
 
       return {
-        totalOrders: stats.total,
-        filledOrders: stats.filled,
-        cancelledOrders: stats.cancelled,
+        totalOrders: total,
+        filledOrders: filled,
+        cancelledOrders: cancelled,
         fillRate,
       };
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error }, 'Error getting execution stats');
       throw error;
     }
   }
 }
+

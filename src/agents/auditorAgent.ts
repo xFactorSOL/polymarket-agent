@@ -1,5 +1,5 @@
 import { getLogger } from '../utils/logger.js';
-import { getDb } from '../db/db.js';
+import { query, queryOne, closeDb } from '../db/db.js';
 
 const logger = getLogger('auditorAgent');
 
@@ -8,31 +8,23 @@ const logger = getLogger('auditorAgent');
  * Validates data consistency, tracks agent actions, and provides audit trails
  */
 export class AuditorAgent {
-  private db: ReturnType<typeof getDb>;
-
-  constructor() {
-    this.db = getDb();
-  }
-
   /**
    * Log an agent action
    */
-  logAction(agentName: string, action: string, marketId?: string, details?: any): void {
+  async logAction(agentName: string, action: string, marketId?: string, details?: any): Promise<void> {
     logger.debug({ agentName, action, marketId, details }, 'Logging agent action');
     
     try {
-      const stmt = this.db.prepare(`
+      await query(`
         INSERT INTO agent_logs (agent_name, action, market_id, details)
-        VALUES (?, ?, ?, ?)
-      `);
-      
-      stmt.run(
+        VALUES ($1, $2, $3, $4)
+      `, [
         agentName,
         action,
         marketId || null,
-        details ? JSON.stringify(details) : null
-      );
-    } catch (error) {
+        details ? JSON.stringify(details) : null,
+      ]);
+    } catch (error: any) {
       logger.error({ error, agentName, action }, 'Error logging agent action');
     }
   }
@@ -53,57 +45,65 @@ export class AuditorAgent {
 
     try {
       // Count records
-      const marketsCount = this.db.prepare('SELECT COUNT(*) as count FROM markets').get() as { count: number };
-      const eventsCount = this.db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number };
-      const ordersCount = this.db.prepare('SELECT COUNT(*) as count FROM orders').get() as { count: number };
-      const positionsCount = this.db.prepare('SELECT COUNT(*) as count FROM positions').get() as { count: number };
+      const marketsResult = await queryOne('SELECT COUNT(*) as count FROM markets') as { count: string | number } | null;
+      const eventsResult = await queryOne('SELECT COUNT(*) as count FROM events') as { count: string | number } | null;
+      const ordersResult = await queryOne('SELECT COUNT(*) as count FROM orders') as { count: string | number } | null;
+      const positionsResult = await queryOne('SELECT COUNT(*) as count FROM positions') as { count: string | number } | null;
+
+      const marketsCount = marketsResult ? Number(marketsResult.count) : 0;
+      const eventsCount = eventsResult ? Number(eventsResult.count) : 0;
+      const ordersCount = ordersResult ? Number(ordersResult.count) : 0;
+      const positionsCount = positionsResult ? Number(positionsResult.count) : 0;
 
       // Check for orphaned orders
-      const orphanedOrders = this.db.prepare(`
+      const orphanedOrdersResult = await queryOne(`
         SELECT COUNT(*) as count 
         FROM orders o
         LEFT JOIN markets m ON o.market_id = m.id
         WHERE m.id IS NULL
-      `).get() as { count: number };
+      `) as { count: string | number } | null;
 
-      if (orphanedOrders.count > 0) {
-        issues.push(`Found ${orphanedOrders.count} orphaned orders`);
+      const orphanedOrders = orphanedOrdersResult ? Number(orphanedOrdersResult.count) : 0;
+      if (orphanedOrders > 0) {
+        issues.push(`Found ${orphanedOrders} orphaned orders`);
       }
 
       // Check for orphaned positions
-      const orphanedPositions = this.db.prepare(`
+      const orphanedPositionsResult = await queryOne(`
         SELECT COUNT(*) as count 
         FROM positions p
         LEFT JOIN markets m ON p.market_id = m.id
         WHERE m.id IS NULL
-      `).get() as { count: number };
+      `) as { count: string | number } | null;
 
-      if (orphanedPositions.count > 0) {
-        issues.push(`Found ${orphanedPositions.count} orphaned positions`);
+      const orphanedPositions = orphanedPositionsResult ? Number(orphanedPositionsResult.count) : 0;
+      if (orphanedPositions > 0) {
+        issues.push(`Found ${orphanedPositions} orphaned positions`);
       }
 
       // Check for positions with invalid status
-      const invalidPositions = this.db.prepare(`
+      const invalidPositionsResult = await queryOne(`
         SELECT COUNT(*) as count 
         FROM positions 
-        WHERE status = 'OPEN' AND closed_at IS NOT NULL
-        OR status = 'CLOSED' AND closed_at IS NULL
-      `).get() as { count: number };
+        WHERE (status = 'OPEN' AND closed_at IS NOT NULL)
+        OR (status = 'CLOSED' AND closed_at IS NULL)
+      `) as { count: string | number } | null;
 
-      if (invalidPositions.count > 0) {
-        issues.push(`Found ${invalidPositions.count} positions with invalid status`);
+      const invalidPositions = invalidPositionsResult ? Number(invalidPositionsResult.count) : 0;
+      if (invalidPositions > 0) {
+        issues.push(`Found ${invalidPositions} positions with invalid status`);
       }
 
       logger.info({ issues: issues.length }, 'Database audit completed');
 
       return {
-        markets: marketsCount.count,
-        events: eventsCount.count,
-        orders: ordersCount.count,
-        positions: positionsCount.count,
+        markets: marketsCount,
+        events: eventsCount,
+        orders: ordersCount,
+        positions: positionsCount,
         issues,
       };
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error }, 'Error auditing database');
       throw error;
     }
@@ -116,18 +116,18 @@ export class AuditorAgent {
     logger.debug({ marketId }, 'Getting audit trail');
     
     try {
-      const logs = this.db.prepare(`
+      const logs = await query(`
         SELECT * FROM agent_logs 
-        WHERE market_id = ? 
+        WHERE market_id = $1 
         ORDER BY created_at DESC
         LIMIT 100
-      `).all(marketId);
+      `, [marketId]);
 
       return logs.map((log: any) => ({
         ...log,
         details: log.details ? JSON.parse(log.details) : null,
       }));
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error, marketId }, 'Error getting audit trail');
       throw error;
     }
@@ -140,22 +140,22 @@ export class AuditorAgent {
     logger.debug({ hours }, 'Getting activity summary');
     
     try {
-      const since = Date.now() / 1000 - hours * 3600;
+      const since = new Date(Date.now() - hours * 3600 * 1000);
       
-      const logs = this.db.prepare(`
+      const logs = await query(`
         SELECT agent_name, COUNT(*) as count
         FROM agent_logs
-        WHERE created_at >= ?
+        WHERE created_at >= $1
         GROUP BY agent_name
-      `).all(since) as Array<{ agent_name: string; count: number }>;
+      `, [since]) as Array<{ agent_name: string; count: string | number }>;
 
       const summary: Record<string, number> = {};
       logs.forEach((log) => {
-        summary[log.agent_name] = log.count;
+        summary[log.agent_name] = Number(log.count);
       });
 
       return summary;
-    } catch (error) {
+    } catch (error: any) {
       logger.error({ error }, 'Error getting activity summary');
       throw error;
     }

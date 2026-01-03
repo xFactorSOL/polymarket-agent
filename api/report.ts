@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { AuditorAgent } from '../src/agents/auditorAgent.js';
 import { ExecutionAgent } from '../src/agents/executionAgent.js';
-import { getDb, closeDb } from '../src/db/db.js';
+import { query, closeDb } from '../src/db/db.js';
 import { getLogger } from '../src/utils/logger.js';
 
 const logger = getLogger('api-report');
@@ -23,7 +23,6 @@ export default async function handler(
       trail,
     } = request.method === 'POST' ? request.body : request.query;
 
-    const db = getDb();
     const auditorAgent = new AuditorAgent();
     const executionAgent = new ExecutionAgent();
 
@@ -34,11 +33,11 @@ export default async function handler(
     }
 
     if (positions) {
-      report.positions = db.prepare('SELECT * FROM positions ORDER BY opened_at DESC').all();
+      report.positions = await query('SELECT * FROM positions ORDER BY opened_at DESC');
     }
 
     if (orders) {
-      report.orders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC LIMIT 20').all();
+      report.orders = await query('SELECT * FROM orders ORDER BY created_at DESC LIMIT 20');
     }
 
     if (stats) {
@@ -49,7 +48,7 @@ export default async function handler(
       report.trail = await auditorAgent.getAuditTrail(trail);
     }
 
-    closeDb();
+    await closeDb();
 
     return response.status(200).json({
       success: true,
@@ -57,7 +56,7 @@ export default async function handler(
     });
   } catch (error: any) {
     logger.error({ error }, 'Error during report');
-    closeDb();
+    await closeDb();
     return response.status(500).json({
       success: false,
       error: error.message || 'Internal server error',

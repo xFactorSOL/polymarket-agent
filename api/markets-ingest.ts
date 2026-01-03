@@ -30,17 +30,17 @@ export default async function handler(
       closed: closed !== undefined ? (closed === 'true' || closed === true) : undefined,
     });
 
-    // Immediately fetch the markets (same function invocation = same /tmp)
-    const db = getDb();
-    const markets = db.prepare(`
+    // Immediately fetch the markets (Postgres persists across invocations)
+    const { query, queryOne } = await import('../src/db/db.js');
+    const markets = await query(`
       SELECT * FROM markets_cache 
-      ORDER BY updatedAt DESC 
-      LIMIT ? OFFSET 0
-    `).all(parseInt(limit as string));
+      ORDER BY "updatedAt" DESC 
+      LIMIT $1 OFFSET 0
+    `, [parseInt(limit as string)]);
 
-    const countResult = db.prepare('SELECT COUNT(*) as total FROM markets_cache').get() as { total: number };
+    const countResult = await queryOne('SELECT COUNT(*) as total FROM markets_cache') as { total: string | number } | null;
 
-    closeDb();
+    await closeDb();
 
     return response.status(200).json({
       success: true,
@@ -50,7 +50,7 @@ export default async function handler(
         errors: ingestResult.errors,
       },
       markets,
-      total: countResult.total,
+      total: countResult ? Number(countResult.total) : 0,
     });
   } catch (error: any) {
     logger.error({ error: error.message }, 'Error in markets-ingest');

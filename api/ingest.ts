@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { MarketService } from '../src/services/marketService.js';
 import { GammaApi } from '../src/clients/gammaApi.js';
-import { getDb, closeDb } from '../src/db/db.js';
+import { closeDb } from '../src/db/db.js';
 import { getLogger } from '../src/utils/logger.js';
 
 const logger = getLogger('api-ingest');
@@ -40,7 +40,7 @@ export default async function handler(
         fetched: ingestResult.fetched,
         stored: ingestResult.stored,
         errors: ingestResult.errors,
-        totalCached: marketService.getCachedMarketsCount(),
+        totalCached: await marketService.getCachedMarketsCount(),
       };
     }
 
@@ -55,7 +55,7 @@ export default async function handler(
       results.events = eventResults;
     }
 
-    closeDb();
+    await closeDb();
 
     return response.status(200).json({
       success: true,
@@ -63,7 +63,7 @@ export default async function handler(
     });
   } catch (error: any) {
     logger.error({ error: error.message }, 'Error during ingest');
-    closeDb();
+    await closeDb();
     return response.status(500).json({
       success: false,
       error: error.message || 'Internal server error',

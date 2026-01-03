@@ -10,18 +10,28 @@ export default function MarketsPage() {
     fetchMarkets();
   }, []);
 
-  const fetchMarkets = async () => {
+  const fetchMarkets = async (forceIngest = false) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/markets?limit=100');
+      // On Vercel, /tmp is ephemeral - each function invocation gets a fresh database
+      // So we need to ingest AND fetch in the same request to see the data
+      const endpoint = forceIngest ? '/api/markets-ingest?sinceDays=30&limit=100' : '/api/markets?limit=100';
+      const response = await fetch(endpoint);
       const data = await response.json();
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch markets');
       }
 
-      setMarkets(data.markets || []);
+      // Handle both response formats
+      if (data.ingestion) {
+        // Combined ingest+fetch response
+        setMarkets(data.markets || []);
+      } else {
+        // Regular markets response
+        setMarkets(data.markets || []);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -47,9 +57,18 @@ export default function MarketsPage() {
       <div className="card">
         <div className="flex-between">
           <h2>Cached Markets</h2>
-          <button className="button secondary" onClick={fetchMarkets}>
-            Refresh
-          </button>
+          <div className="flex" style={{ gap: '0.5rem' }}>
+            <button className="button secondary" onClick={() => fetchMarkets(false)}>
+              Refresh
+            </button>
+            <button className="button" onClick={() => fetchMarkets(true)}>
+              Ingest & View
+            </button>
+          </div>
+        </div>
+        
+        <div className="status warning" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+          ⚠️ Note: On Vercel, databases reset between function calls. Use "Ingest & View" to see markets immediately.
         </div>
 
         {loading && (

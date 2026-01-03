@@ -1,6 +1,7 @@
 {
-  "buildCommand": "echo 'No build needed for API routes'",
+  "buildCommand": null,
   "installCommand": "npm install",
+  "outputDirectory": null,
   "framework": null,
   "functions": {
     "api/**/*.ts": {

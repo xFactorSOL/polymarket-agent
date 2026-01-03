@@ -1,4 +1,7 @@
 {
+  "buildCommand": "echo 'No build needed for API routes'",
+  "installCommand": "npm install",
+  "framework": null,
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 30

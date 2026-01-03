@@ -182,7 +182,7 @@ export class GammaApi {
         return res;
       });
 
-      const data: GammaMarketsResponse = await response.json();
+      const data = await response.json() as GammaMarketsResponse;
       
       // Handle different response formats
       const markets = data.results || data.data || data.markets || [];
@@ -241,7 +241,7 @@ export class GammaApi {
         return null;
       }
 
-      const market = await response.json();
+      const market = await response.json() as GammaMarket;
       logger.debug({ slug }, 'Fetched market from Gamma API');
       return market;
     } catch (error: any) {

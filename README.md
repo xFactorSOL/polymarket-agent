@@ -230,12 +230,14 @@ This project can be deployed to Vercel as serverless API functions. The API rout
    - Choose `xFactorSOL/polymarket-agent`
    - Click "Import"
 
-3. **Configure Project Settings**:
-   - **Framework Preset**: Select "Other" (or leave as "Other")
+3. **Configure Project Settings** (CRITICAL):
+   - **Framework Preset**: Select "Other"
    - **Root Directory**: `./` (default)
-   - **Build Command**: Leave empty (Vercel compiles TypeScript automatically)
-   - **Output Directory**: Leave empty
+   - **Build Command**: ⚠️ **DELETE/EMPTY THIS FIELD** (leave completely empty - Vercel compiles TypeScript automatically for API routes)
+   - **Output Directory**: ⚠️ **DELETE/EMPTY THIS FIELD** (leave completely empty - API routes don't need output directory)
    - **Install Command**: `npm install` (should auto-detect)
+   
+   **Important**: For API-only projects, you MUST leave Build Command and Output Directory empty, otherwise Vercel will look for a "public" directory and fail.
 
 4. **Set Environment Variables** (optional, in "Environment Variables" section):
    - `DATABASE_PATH=/tmp/polymarket.db`

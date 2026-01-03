@@ -1,13 +1,47 @@
-import { sql } from '@vercel/postgres';
+import { Pool } from 'pg';
 import { getLogger } from '../utils/logger.js';
 
 const logger = getLogger('db-pg');
 
+let pool: Pool | null = null;
 let schemaInitialized = false;
 
 /**
+ * Get database connection pool (Postgres - works with Neon, Vercel Postgres, etc.)
+ */
+function getPool(): Pool {
+  if (pool) {
+    return pool;
+  }
+
+  // Use POSTGRES_URL (Neon/Vercel) or DATABASE_URL
+  const connectionString = process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    throw new Error('POSTGRES_URL or DATABASE_URL environment variable is required');
+  }
+
+  logger.info('Connecting to PostgreSQL database');
+
+  // Create connection pool
+  pool = new Pool({
+    connectionString,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 10, // Maximum pool size
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+  // Handle pool errors
+  pool.on('error', (err) => {
+    logger.error({ error: err.message }, 'Unexpected database pool error');
+  });
+
+  return pool;
+}
+
+/**
  * Initialize database schema (idempotent)
- * Note: Vercel Postgres automatically creates tables, but we'll run schema for safety
  */
 async function initializeSchema(): Promise<void> {
   if (schemaInitialized) {
@@ -15,35 +49,32 @@ async function initializeSchema(): Promise<void> {
   }
 
   try {
-    // For Vercel Postgres, tables are created automatically via migrations
-    // or we can create them on first run. For now, we'll let Vercel handle it
-    // or create tables via Vercel dashboard/SQL editor
     schemaInitialized = true;
-    logger.info('Using Vercel Postgres (schema managed via Vercel)');
+    logger.info('Using PostgreSQL database (schema should be initialized via SQL editor)');
   } catch (error: any) {
     logger.error({ error: error.message }, 'Error initializing database schema');
-    // Don't throw - let queries create tables as needed
   }
 }
 
 /**
- * Get database instance (Postgres via @vercel/postgres)
+ * Get database instance (Postgres)
  */
 export async function getDb() {
-  // Initialize schema on first access
   if (!schemaInitialized) {
     await initializeSchema();
   }
-  
-  return sql;
+  return getPool();
 }
 
 /**
- * Close database connection (no-op for @vercel/postgres, connection is managed)
+ * Close database connection
  */
 export async function closeDb(): Promise<void> {
-  // @vercel/postgres manages connections automatically
-  // No explicit close needed
+  if (pool) {
+    await pool.end();
+    pool = null;
+    schemaInitialized = false;
+  }
 }
 
 /**
@@ -51,7 +82,8 @@ export async function closeDb(): Promise<void> {
  */
 export async function query(text: string, params?: any[]): Promise<any[]> {
   try {
-    const result = await sql.query(text, params || []);
+    const client = getPool();
+    const result = await client.query(text, params || []);
     return result.rows;
   } catch (error: any) {
     logger.error({ error: error.message, query: text.substring(0, 100) }, 'Query error');
@@ -64,8 +96,8 @@ export async function query(text: string, params?: any[]): Promise<any[]> {
  */
 export async function queryOne(text: string, params?: any[]): Promise<any | null> {
   try {
-    const result = await sql.query(text, params || []);
-    return result.rows[0] || null;
+    const results = await query(text, params);
+    return results[0] || null;
   } catch (error: any) {
     logger.error({ error: error.message, query: text.substring(0, 100) }, 'QueryOne error');
     throw error;
@@ -77,7 +109,8 @@ export async function queryOne(text: string, params?: any[]): Promise<any | null
  */
 export async function execute(text: string, params?: any[]): Promise<number> {
   try {
-    const result = await sql.query(text, params || []);
+    const client = getPool();
+    const result = await client.query(text, params || []);
     return result.rowCount || 0;
   } catch (error: any) {
     logger.error({ error: error.message, query: text.substring(0, 100) }, 'Execute error');
